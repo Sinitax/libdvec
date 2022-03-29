@@ -1,3 +1,6 @@
+vec_init
+vec_deinit
+
 vec_alloc
 vec_free
 

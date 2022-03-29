@@ -6,21 +6,15 @@
 #include <stdarg.h>
 #include <string.h>
 
-#define OFFSETOF(type, member) ((size_t) &((type *)0)->member)
-
+#ifdef LIBVEC_SAFE
 #define ASSERT(x) assert((x), __FILE__, __LINE__, #x)
 #define OOM_CHECK(x) assert((x) != NULL, __FILE__, __LINE__, "Out of Memory")
-
-struct vec {
-	size_t dsize;
-	size_t count, cap;
-
-	char data[];
-};
+#else
+#define ASSERT(x)
+#define OOM_CHECK(x)
+#endif
 
 static void assert(int cond, const char *file, int line, const char *condstr);
-
-static const size_t vec_data_offset = OFFSETOF(struct vec, data);
 
 void
 assert(int cond, const char *file, int line, const char *condstr)
@@ -32,18 +26,41 @@ assert(int cond, const char *file, int line, const char *condstr)
 	exit(1);
 }
 
+void
+vec_init(struct vec *vec, size_t dsize, size_t cap)
+{
+	ASSERT(vec != NULL && dsize > 0 && cap >= 0);
+
+	vec->dsize = dsize;
+	vec->cap = cap;
+
+	vec->len = 0;
+	vec->data = NULL;
+	if (vec->cap) {
+		vec->data = malloc(dsize * cap);
+		OOM_CHECK(vec->data);
+	}
+}
+
+void
+vec_deinit(struct vec *vec)
+{
+	ASSERT(vec != NULL);
+
+	free(vec->data);
+}
+
 struct vec *
 vec_alloc(size_t dsize, size_t cap)
 {
 	struct vec *vec;
 
-	ASSERT(dsize != 0 && cap != 0);
+	ASSERT(dsize > 0 && cap > 0);
 
-	vec = malloc(vec_data_offset + cap * dsize);
+	vec = malloc(sizeof(struct vec));
 	OOM_CHECK(vec);
-	vec->dsize = dsize;
-	vec->count = 0;
-	vec->cap = cap;
+
+	vec_init(vec, dsize, cap);
 
 	return vec;
 }
@@ -53,6 +70,7 @@ vec_free(struct vec *vec)
 {
 	ASSERT(vec != NULL);
 
+	vec_deinit(vec);
 	free(vec);
 }
 
@@ -61,49 +79,67 @@ vec_clear(struct vec *vec)
 {
 	ASSERT(vec != NULL);
 
-	vec->count = 0;
+	vec->len = 0;
 }
 
 void
 vec_resize(struct vec *vec, size_t cap)
 {
-	ASSERT(vec != NULL && cap != 0 && vec->count <= cap);
+	ASSERT(vec != NULL && cap != 0 && vec->len <= cap);
 
 	vec->cap = cap;
-	vec = realloc(vec, vec_data_offset + vec->cap * vec->dsize);
-	OOM_CHECK(vec);
+	vec->data = realloc(vec->data, vec->cap * vec->dsize);
+	OOM_CHECK(vec->data);
 }
 
 void
-vec_add(struct vec *vec, const void *data, size_t count)
+vec_add(struct vec *vec, const void *data, size_t len)
 {
 	ASSERT(vec != NULL && data != NULL);
 
-	if (vec->count + count > vec->cap) {
+	if (vec->len + len > vec->cap) {
 		vec->cap *= 2;
-		if (vec->count + count > vec->cap)
-			vec->cap = vec->count + count;
-		vec = realloc(vec, vec_data_offset + vec->cap * vec->dsize);
-		OOM_CHECK(vec);
+		if (vec->len + len > vec->cap)
+			vec->cap = vec->len + len;
+		vec->data = realloc(vec->data, vec->cap * vec->dsize);
+		OOM_CHECK(vec->data);
 	}
 
-	memcpy(vec->data + vec->count * vec->dsize,
-		data, vec->count * vec->dsize);
-	vec->count += count;
+	memcpy(vec->data + vec->len * vec->dsize, data, len * vec->dsize);
+	vec->len += len;
 }
 
 void
 vec_rm(struct vec *vec, size_t count)
 {
-	ASSERT(vec != NULL);
+	ASSERT(vec != NULL && len >= vec->len);
 
-	vec->count -= count;
-	if (vec->count < vec->cap / 2) {
+	vec->len -= count;
+	if (vec->len < vec->cap / 2) {
 		vec->cap /= 2;
-		vec = realloc(vec, vec_data_offset + vec->cap * vec->dsize);
-		OOM_CHECK(vec);
+		vec->data = realloc(vec->data, vec->cap * vec->dsize);
+		OOM_CHECK(vec->data);
 	}
 }
+
+void
+vec_rm_at(struct vec *vec, size_t index, size_t count)
+{
+	void *start, *end;
+
+	ASSERT(vec != NULL && index < vec->len
+		&& count > 0 && index + count < vec->len);
+
+	if (index + count < vec->len) {
+		start = vec->data + index * vec->dsize;
+		end = vec->data + vec->len * vec->dsize;
+		memcpy(start, start + count * vec->dsize,
+			(vec->len - index - count) * vec->dsize);
+	}
+
+	vec_rm(vec, count);
+}
+
 
 void
 vec_push(struct vec *vec, const void *data)
@@ -118,35 +154,13 @@ vec_pop(struct vec *vec)
 
 	vec_rm(vec, 1);
 
-	return vec->data + vec->dsize * vec->count;
-}
-
-void
-vec_pop_at(struct vec *vec, size_t index)
-{
-	void *start, *end;
-
-	ASSERT(vec != NULL && index < vec->count);
-
-	start = vec->data + index * vec->dsize;
-	end = vec->data + vec->count * vec->dsize;
-	if (start + vec->dsize < end) {
-		memcpy(start, start + vec->dsize, end - start - vec->dsize);
-	}
-
-	vec->count--;
-
-	if (vec->count < vec->cap / 2) {
-		vec->cap /= 2;
-		vec = realloc(vec, vec_data_offset + vec->cap * vec->dsize);
-		OOM_CHECK(vec);
-	}
+	return vec->data + vec->dsize * vec->len;
 }
 
 void *
 vec_at(struct vec *vec, size_t index)
 {
-	ASSERT(vec != NULL && index < vec->count);
+	ASSERT(vec != NULL && index < vec->len);
 
 	return vec->data + vec->dsize * index;
 }
@@ -156,7 +170,9 @@ vec_iter(struct vec *vec, void *_p)
 {
 	char **iter;
 
-	ASSERT(vec != NULL && vec != NULL);
+	ASSERT(vec != NULL && p != NULL);
+
+	if (!vec->len) return false;
 
 	iter = _p;
 	if (*iter == NULL) {
@@ -165,15 +181,38 @@ vec_iter(struct vec *vec, void *_p)
 		*iter += vec->dsize;
 	}
 
-	return *iter < vec->data + vec->dsize * vec->count;
+	return *iter < vec->data + vec->dsize * vec->len;
 }
 
 void
 vec_set(struct vec *vec, size_t index, const void *data)
 {
-	ASSERT(vec != NULL && data != NULL && index < vec->count);
+	ASSERT(vec != NULL && data != NULL && index < vec->len);
 
 	memcpy(vec->data + index * vec->dsize, data, vec->dsize);
+}
+
+void
+vec_setbuf(struct vec *vec, void *data)
+{
+	ASSERT(vec != NULL && buf != NULL);
+
+	free(vec->data);
+	vec->data = data;
+}
+
+void *
+vec_popbuf(struct vec *vec)
+{
+	void *data;
+
+	ASSERT(vec != NULL);
+
+	data = vec->data;
+	vec->data = NULL;
+	vec->len = 0;
+
+	return data;
 }
 
 int
@@ -181,7 +220,7 @@ vec_empty(struct vec *vec)
 {
 	ASSERT(vec != NULL);
 
-	return vec->count == 0;
+	return vec->len == 0;
 }
 
 int
@@ -189,5 +228,5 @@ vec_len(struct vec *vec)
 {
 	ASSERT(vec != NULL);
 
-	return vec->count;
+	return vec->len;
 }

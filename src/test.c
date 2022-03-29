@@ -7,21 +7,16 @@
 int
 main(int argc, const char **argv)
 {
-	struct vec *vec;
-	int *num;
-	int i, val;
+	struct vec vec;
+	int *num, i;
 
-	vec = vec_alloc(sizeof(int), 10);
-	
-	for (i = 1; i < argc; i++) {
-		val = atoi(argv[i]);
-		vec_push(vec, &val);
-	}
+	vec_init(&vec, sizeof(int), 10);
 
-	num = NULL;
-	while (vec_iter(vec, &num)) {
-		printf("%i\n", *num);
-	}
+	for (i = 1; i < argc; i++)
+		VEC_PUSH(&vec, int, atoi(argv[i]));
 
-	vec_free(vec);
+	for (i = 0; i < vec_len(&vec); i++)
+		printf("%i\n", VEC_AT(&vec, int, i));
+
+	vec_deinit(&vec);
 }

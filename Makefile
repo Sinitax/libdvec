@@ -1,4 +1,4 @@
-CFLAGS = -I include
+CFLAGS = -I include -g
 LDLIBS =
 DEPFLAGS = -MT $@ -MMD -MP -MF build/$*.d
 
@@ -34,9 +34,8 @@ build/libvec.a: $(OBJS) | build
 	ar rcs $@ build/fixed.o
 
 build/libvec.so: $(PI_OBJS) | build
-	$(CC) -o build/tmp.so $(PI_OBJS) $(CFLAGS) -shared
-	objcopy --keep-global-symbols=libvec.abi build/tmp.so $@
+	$(CC) -o $@ $(PI_OBJS) $(CFLAGS) -shared -Wl,-version-script libvec.lds
 
 build/test: src/test.c build/libvec.a | build
-	$(CC) -o $@ $^ -I include
+	$(CC) -o $@ $^ $(CFLAGS)
 
