@@ -1,6 +1,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#define VEC_ITER(vec, var) \
+	var = NULL; vec_iter(vec, &var); 
+
 #define VEC_PUSH(vec, type, val) \
 	do { \
 		type tmp = (val); \
@@ -46,5 +49,5 @@ void vec_set(struct vec *vec, size_t index, const void *data);
 void vec_setbuf(struct vec *vec, void *buf);
 void *vec_popbuf(struct vec *vec);
 
-int vec_empty(struct vec *vec);
+bool vec_empty(struct vec *vec);
 int vec_len(struct vec *vec);

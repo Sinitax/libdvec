@@ -215,7 +215,7 @@ vec_popbuf(struct vec *vec)
 	return data;
 }
 
-int
+bool
 vec_empty(struct vec *vec)
 {
 	ASSERT(vec != NULL);
