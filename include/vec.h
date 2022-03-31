@@ -1,13 +1,14 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#define VEC_ITER(vec, var) \
-	var = NULL; vec_iter(vec, &var); 
+#define VEC_ITER(vec, type, var) \
+	var = (type*) NULL; vec_iter(vec, &var); 
 
 #define VEC_PUSH(vec, type, val) \
 	do { \
 		type tmp = (val); \
-		vec_push(vec, &tmp); } while (0)
+		vec_push(vec, &tmp); \
+	} while (0)
 
 #define VEC_POP(vec, type, var) \
 	do { \
