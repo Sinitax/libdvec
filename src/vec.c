@@ -6,12 +6,12 @@
 #include <stdarg.h>
 #include <string.h>
 
-#ifdef LIBVEC_SAFE
-#define ASSERT(x) assert((x), __FILE__, __LINE__, #x)
-#define OOM_CHECK(x) assert((x) != NULL, __FILE__, __LINE__, "Out of Memory")
-#else
+#ifdef LIBVEC_UNSAFE
 #define ASSERT(x)
 #define OOM_CHECK(x)
+#else
+#define ASSERT(x) assert((x), __FILE__, __LINE__, #x)
+#define OOM_CHECK(x) assert((x) != NULL, __FILE__, __LINE__, "Out of Memory")
 #endif
 
 static void assert(int cond, const char *file, int line, const char *condstr);
@@ -112,7 +112,7 @@ vec_add(struct vec *vec, const void *data, size_t len)
 void
 vec_rm(struct vec *vec, size_t count)
 {
-	ASSERT(vec != NULL && len >= vec->len);
+	ASSERT(vec != NULL && count >= vec->len);
 
 	vec->len -= count;
 	if (vec->len < vec->cap / 2) {
@@ -166,7 +166,7 @@ vec_at(struct vec *vec, size_t index)
 }
 
 bool
-vec_iter(struct vec *vec, void *_p)
+vec_iter(struct vec *vec, void *p)
 {
 	char **iter;
 
@@ -174,7 +174,7 @@ vec_iter(struct vec *vec, void *_p)
 
 	if (!vec->len) return false;
 
-	iter = _p;
+	iter = p;
 	if (*iter == NULL) {
 		*iter = vec->data;
 	} else {
@@ -195,7 +195,7 @@ vec_set(struct vec *vec, size_t index, const void *data)
 void
 vec_setbuf(struct vec *vec, void *data)
 {
-	ASSERT(vec != NULL && buf != NULL);
+	ASSERT(vec != NULL && data != NULL);
 
 	free(vec->data);
 	vec->data = data;
