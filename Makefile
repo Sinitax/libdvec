@@ -1,14 +1,8 @@
-CFLAGS = -I include -g
-LDLIBS =
-DEPFLAGS = -MT $@ -MMD -MP -MF build/$*.d
+CFLAGS = -g -I include -Wno-prototype -Wunused-function -Wunused-variable
 
-_SRCS = vec.c
-SRCS = $(_SRCS:%.c=src/%.c)
-OBJS = $(_SRCS:%.c=build/%.o)
-DEPS = $(_SRCS:%.c=build/%.d)
-PI_OBJS = $(_SRCS:%.c=build/%.pi.o)
-
-.PHONY: all clean
+ifeq "$(LIBVEC_ASSERT)" "1"
+CFLAGS += -DLIBVEC_ASSERT=1
+endif
 
 all: build/libvec.so build/libvec.a build/test
 
@@ -18,24 +12,15 @@ clean:
 build:
 	mkdir build
 
-build/%.o: src/%.c build/%.d | build
-	$(CC) -c -o $@ $< $(DEPFLAGS) $(CFLAGS)
-
-build/%.pi.o: src/%.c build/%.d | build
-	$(CC) -c -o $@ $< $(DEPFLAGS) $(CFLAGS) -fPIC
-
-build/%.d: | build;
-
-include $(DEPS)
-
-build/libvec.a: $(OBJS) | build
+build/libvec.a: src/vec.c | build
 	$(CC) -o build/tmp.o $^ $(CFLAGS) -r
 	objcopy --keep-global-symbols=libvec.abi build/tmp.o build/fixed.o
 	ar rcs $@ build/fixed.o
 
-build/libvec.so: $(PI_OBJS) | build
-	$(CC) -o $@ $(PI_OBJS) $(CFLAGS) -shared -Wl,-version-script libvec.lds
+build/libvec.so: src/vec.c | build
+	$(CC) -o $@ $* -fPIC $(CFLAGS) -shared -Wl,-version-script libvec.lds
 
-build/test: src/test.c build/libvec.a | build
+build/test: src/test.c build/libvec.a
 	$(CC) -o $@ $^ $(CFLAGS)
 
+.PHONY: all clean

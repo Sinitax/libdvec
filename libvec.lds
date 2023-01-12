@@ -1,4 +1,4 @@
-LIBVEC_1.0 {
+LIBVEC_1.1 {
 	global:
 		vec_init;
 		vec_deinit;
@@ -8,17 +8,13 @@ LIBVEC_1.0 {
 
 		vec_clear;
 		vec_resize;
+		vec_shrink;
 
-		vec_push;
-		vec_pop;
+		vec_reserve;
+		vec_remove;
+		vec_replace;
 
-		vec_at;
-		vec_iter;
-
-		vec_set;
-		vec_rm;
-
-		vec_empty;
-		vec_len;
+		vec_iter_fwd;
+		vec_iter_bwd;
 	local: *;
 };

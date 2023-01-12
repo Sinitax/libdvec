@@ -8,15 +8,17 @@ int
 main(int argc, const char **argv)
 {
 	struct vec vec;
-	int *num, i;
+	int i, *val;
 
 	vec_init(&vec, sizeof(int), 10);
 
-	for (i = 1; i < argc; i++)
-		VEC_PUSH(&vec, int, atoi(argv[i]));
+	for (i = 1; i < argc; i++) {
+		val = vec_alloc_slot(&vec);
+		*val = atoi(argv[i]);
+	}
 
-	for (i = 0; i < vec_len(&vec); i++)
-		printf("%i\n", VEC_AT(&vec, int, i));
+	for (i = 0; i < vec.len; i++)
+		printf("%i\n", *(int *)vec_at(&vec, i));
 
 	vec_deinit(&vec);
 }
