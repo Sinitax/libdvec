@@ -1,13 +1,12 @@
 #include "vec.h"
 
-#include <err.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
 
-void
+bool
 vec_init(struct vec *vec, size_t dsize, size_t cap)
 {
 	LIBVEC_ASSERT(vec != NULL && dsize > 0 && cap >= 0);
@@ -18,9 +17,14 @@ vec_init(struct vec *vec, size_t dsize, size_t cap)
 	vec->len = 0;
 	vec->data = NULL;
 	if (vec->cap) {
-		vec->data = malloc(dsize * cap);
-		if (!vec->data) err(1, "malloc");
+		vec->data = calloc(cap, dsize);
+		if (!vec->data) {
+			LIBVEC_HANDLE_ERR("calloc");
+			return false;
+		}
 	}
+
+	return true;
 }
 
 void
@@ -39,9 +43,15 @@ vec_alloc(size_t dsize, size_t cap)
 	LIBVEC_ASSERT(dsize > 0 && cap > 0);
 
 	vec = malloc(sizeof(struct vec));
-	if (!vec) err(1, "malloc");
+	if (!vec) {
+		LIBVEC_HANDLE_ERR("malloc");
+		return NULL;
+	}
 
-	vec_init(vec, dsize, cap);
+	if (!vec_init(vec, dsize, cap)) {
+		free(vec);
+		return NULL;
+	}
 
 	return vec;
 }
@@ -63,17 +73,22 @@ vec_clear(struct vec *vec)
 	vec->len = 0;
 }
 
-void
+bool
 vec_resize(struct vec *vec, size_t cap)
 {
 	LIBVEC_ASSERT(vec != NULL && cap != 0 && vec->len <= cap);
 
 	vec->cap = cap;
 	vec->data = realloc(vec->data, vec->cap * vec->dsize);
-	if (!vec->data) err(1, "realloc");
+	if (!vec->data) {
+		LIBVEC_HANDLE_ERR("realloc");
+		return false;
+	}
+
+	return true;
 }
 
-void
+bool
 vec_shrink(struct vec *vec)
 {
 	LIBVEC_ASSERT(vec != NULL);
@@ -85,10 +100,15 @@ vec_shrink(struct vec *vec)
 	}
 
 	vec->data = realloc(vec->data, vec->cap * vec->dsize);
-	if (!vec->data) err(1, "realloc");
+	if (!vec->data) {
+		LIBVEC_HANDLE_ERR("realloc");
+		return false;
+	}
+
+	return true;
 }
 
-void
+bool
 vec_reserve(struct vec *vec, size_t index, size_t len)
 {
 	LIBVEC_ASSERT(vec != NULL && index <= vec->len);
@@ -98,7 +118,10 @@ vec_reserve(struct vec *vec, size_t index, size_t len)
 		if (vec->len + len > vec->cap)
 			vec->cap = vec->len + len;
 		vec->data = realloc(vec->data, vec->cap * vec->dsize);
-		if (!vec->data) err(1, "realloc");
+		if (!vec->data) {
+			LIBVEC_HANDLE_ERR("realloc");
+			return false;
+		}
 	}
 
 	if (index < vec->len) {
@@ -108,6 +131,8 @@ vec_reserve(struct vec *vec, size_t index, size_t len)
 	}
 
 	vec->len += len;
+
+	return true;
 }
 
 void

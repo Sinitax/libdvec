@@ -16,5 +16,19 @@ LIBVEC_1.1 {
 
 		vec_iter_fwd;
 		vec_iter_bwd;
+
+		bitvec_init;
+		bitvec_deinit;
+
+		bitvec_alloc;
+		bitvec_free;
+
+		bitvec_reserve;
+		bitvec_shrink;
+
+		bitvec_get;
+		bitvec_set;
+		bitvec_clear;
+		bitvec_setn;
 	local: *;
 };
