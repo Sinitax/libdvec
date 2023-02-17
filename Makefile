@@ -1,7 +1,12 @@
-CFLAGS = -g -I include -Wno-prototype -Wunused-function -Wunused-variable
+PREFIX ?= /usr/local
+LIBDIR ?= /lib
+INCLUDEDIR ?= /include
 
-SRC = src/vec.c src/bitvec.c
-HDR = include/vec.h include/bitvec.h
+CFLAGS = -I include -Wno-prototype -Wunused-function -Wunused-variable
+
+ifeq "$(LIBVEC_DEBUG)" "1"
+CFLAGS += -g
+endif
 
 ifeq "$(LIBVEC_ASSERT)" "1"
 CFLAGS += -DLIBVEC_ASSERT_ENABLE=1
@@ -19,15 +24,25 @@ clean:
 build:
 	mkdir build
 
-build/libvec.a: $(SRC) $(HDR) | build
-	$(CC) -o build/tmp.o $(SRC) $(CFLAGS) -r
+build/libvec.a: src/vec.c include/vec.h | build
+	$(CC) -o build/tmp.o src/vec.c $(CFLAGS) -r
 	objcopy --keep-global-symbols=libvec.abi build/tmp.o build/fixed.o
 	ar rcs $@ build/fixed.o
 
-build/libvec.so: $(SRC) $(HDR) | build
-	$(CC) -o $@ $(SRC) -fPIC $(CFLAGS) -shared -Wl,-version-script libvec.lds
+build/libvec.so: src/vec.c include/vec.h | build
+	$(CC) -o $@ src/vec.c -fPIC $(CFLAGS) -shared -Wl,-version-script libvec.lds
 
 build/test: src/test.c build/libvec.a
 	$(CC) -o $@ $^ $(CFLAGS)
 
-.PHONY: all clean
+install:
+	install -m644 include/vec.h -t "$(DESTDIR)$(PREFIX)$(INCLUDEDIR)"
+	install -m755 build/libvec.so -t "$(DESTDIR)$(PREFIX)$(LIBDIR)"
+	install -m755 build/libvec.a -t "$(DESTDIR)$(PREFIX)$(LIBDIR)"
+
+uninstall:
+	rm -f "$(DESTDIR)$(PREFIX)$(INCLUDEDIR)/vec.h"
+	rm -f "$(DESTDIR)$(PREFIX)$(LIBDIR)/libvec.so"
+	rm -f "$(DESTDIR)$(PREFIX)$(LIBDIR)/libvec.a"
+
+.PHONY: all clean install uninstall
