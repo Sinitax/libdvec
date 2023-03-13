@@ -16,9 +16,9 @@ clean:
 build:
 	mkdir build
 
-build/libvec.a: src/vec.c include/vec.h libvec.abi | build
+build/libvec.a: src/vec.c include/vec.h libvec.api | build
 	$(CC) -o build/tmp.o src/vec.c $(CFLAGS) -r
-	objcopy --keep-global-symbols=libvec.abi build/tmp.o build/fixed.o
+	objcopy --keep-global-symbols=libvec.api build/tmp.o build/fixed.o
 	ar rcs $@ build/fixed.o
 
 build/libvec.so: src/vec.c include/vec.h libvec.lds | build
