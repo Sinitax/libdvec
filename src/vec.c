@@ -33,7 +33,7 @@ vec_init(struct vec *vec, size_t dsize, size_t cap)
 	vec->data = NULL;
 	if (vec->cap) {
 		vec->data = calloc(cap, dsize);
-		if (!vec->data) return errno;
+		if (!vec->data) return -errno;
 	}
 
 	return 0;
@@ -55,7 +55,7 @@ vec_alloc(struct vec **vec, size_t dsize, size_t cap)
 	LIBVEC_CHECK(vec != NULL && dsize > 0 && cap > 0);
 
 	*vec = malloc(sizeof(struct vec));
-	if (!*vec) return errno;
+	if (!*vec) return -errno;
 
 	rc = vec_init(*vec, dsize, cap);
 	if (rc) {
@@ -93,7 +93,7 @@ vec_resize(struct vec *vec, size_t cap)
 
 	vec->cap = cap;
 	alloc = realloc(vec->data, vec->cap * vec->dsize);
-	if (!alloc) return errno;
+	if (!alloc) return -errno;
 	vec->data = alloc;
 
 	return 0;
@@ -113,7 +113,7 @@ vec_shrink(struct vec *vec)
 	}
 
 	alloc = realloc(vec->data, vec->cap * vec->dsize);
-	if (!alloc) return errno;
+	if (!alloc) return -errno;
 	vec->data = alloc;
 
 	return 0;
@@ -131,7 +131,7 @@ vec_reserve(struct vec *vec, size_t index, size_t len)
 		if (vec->len + len > vec->cap)
 			vec->cap = vec->len + len;
 		alloc = realloc(vec->data, vec->cap * vec->dsize);
-		if (!alloc) return errno;
+		if (!alloc) return -errno;
 		vec->data = alloc;
 	}
 

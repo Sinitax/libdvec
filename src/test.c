@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define LIBVEC_ERR(rc) errx(1, "libvec: %s", strerror(rc))
+#define LIBVEC_ERR(rc) errx(1, "libvec: %s", rc < 0 ? strerror(-rc) : "???")
 
 int
 main(int argc, const char **argv)
