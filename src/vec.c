@@ -1,15 +1,32 @@
 #include "vec.h"
 
 #include <errno.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-bool
+#ifdef LIBVEC_CHECK_ENABLE
+#define LIBVEC_CHECK(x) libvec_assert((x), __FILE__, __LINE__, #x)
+#else
+#define LIBVEC_CHECK(x)
+#endif
+
+int libvec_errno = 0;
+
+static inline void
+libvec_assert(int cond, const char *file, int line, const char *condstr)
+{
+	if (cond) return;
+
+	fprintf(stderr, "libvec: Assertion failed at %s:%i (%s)\n",
+		file, line, condstr);
+	abort();
+}
+
+int
 vec_init(struct vec *vec, size_t dsize, size_t cap)
 {
-	LIBVEC_ASSERT(vec != NULL && dsize > 0 && cap >= 0);
+	LIBVEC_CHECK(vec != NULL && dsize > 0 && cap >= 0);
 
 	vec->dsize = dsize;
 	vec->cap = cap;
@@ -19,18 +36,18 @@ vec_init(struct vec *vec, size_t dsize, size_t cap)
 	if (vec->cap) {
 		vec->data = calloc(cap, dsize);
 		if (!vec->data) {
-			LIBVEC_HANDLE_ERR("calloc");
-			return false;
+			libvec_errno = errno;
+			return libvec_errno;
 		}
 	}
 
-	return true;
+	return 0;
 }
 
 void
 vec_deinit(struct vec *vec)
 {
-	LIBVEC_ASSERT(vec != NULL);
+	LIBVEC_CHECK(vec != NULL);
 
 	free(vec->data);
 }
@@ -40,11 +57,11 @@ vec_alloc(size_t dsize, size_t cap)
 {
 	struct vec *vec;
 
-	LIBVEC_ASSERT(dsize > 0 && cap > 0);
+	LIBVEC_CHECK(dsize > 0 && cap > 0);
 
 	vec = malloc(sizeof(struct vec));
 	if (!vec) {
-		LIBVEC_HANDLE_ERR("malloc");
+		libvec_errno = errno;
 		return NULL;
 	}
 
@@ -59,7 +76,7 @@ vec_alloc(size_t dsize, size_t cap)
 void
 vec_free(struct vec *vec)
 {
-	LIBVEC_ASSERT(vec != NULL);
+	LIBVEC_CHECK(vec != NULL);
 
 	vec_deinit(vec);
 	free(vec);
@@ -68,30 +85,35 @@ vec_free(struct vec *vec)
 void
 vec_clear(struct vec *vec)
 {
-	LIBVEC_ASSERT(vec != NULL);
+	LIBVEC_CHECK(vec != NULL);
 
 	vec->len = 0;
 }
 
-bool
+int
 vec_resize(struct vec *vec, size_t cap)
 {
-	LIBVEC_ASSERT(vec != NULL && cap != 0 && vec->len <= cap);
+	void *alloc;
+
+	LIBVEC_CHECK(vec != NULL && cap != 0 && vec->len <= cap);
 
 	vec->cap = cap;
-	vec->data = realloc(vec->data, vec->cap * vec->dsize);
-	if (!vec->data) {
-		LIBVEC_HANDLE_ERR("realloc");
-		return false;
+	alloc = realloc(vec->data, vec->cap * vec->dsize);
+	if (!alloc) {
+		libvec_errno = errno;
+		return libvec_errno;
 	}
+	vec->data = alloc;
 
-	return true;
+	return 0;
 }
 
-bool
+int
 vec_shrink(struct vec *vec)
 {
-	LIBVEC_ASSERT(vec != NULL);
+	void *alloc;
+
+	LIBVEC_CHECK(vec != NULL);
 
 	if (!vec->len) {
 		vec->cap = 1;
@@ -99,29 +121,33 @@ vec_shrink(struct vec *vec)
 		vec->cap = vec->len;
 	}
 
-	vec->data = realloc(vec->data, vec->cap * vec->dsize);
-	if (!vec->data) {
-		LIBVEC_HANDLE_ERR("realloc");
-		return false;
+	alloc = realloc(vec->data, vec->cap * vec->dsize);
+	if (!alloc) {
+		libvec_errno = errno;
+		return libvec_errno;
 	}
+	vec->data = alloc;
 
-	return true;
+	return 0;
 }
 
-bool
+int
 vec_reserve(struct vec *vec, size_t index, size_t len)
 {
-	LIBVEC_ASSERT(vec != NULL && index <= vec->len);
+	void *alloc;
+
+	LIBVEC_CHECK(vec != NULL && index <= vec->len);
 
 	if (vec->len + len > vec->cap) {
 		vec->cap *= 2;
 		if (vec->len + len > vec->cap)
 			vec->cap = vec->len + len;
-		vec->data = realloc(vec->data, vec->cap * vec->dsize);
-		if (!vec->data) {
-			LIBVEC_HANDLE_ERR("realloc");
-			return false;
+		alloc = realloc(vec->data, vec->cap * vec->dsize);
+		if (!alloc) {
+			libvec_errno = errno;
+			return errno;
 		}
+		vec->data = alloc;
 	}
 
 	if (index < vec->len) {
@@ -138,7 +164,8 @@ vec_reserve(struct vec *vec, size_t index, size_t len)
 void
 vec_remove(struct vec *vec, size_t index, size_t count)
 {
-	LIBVEC_ASSERT(vec != NULL && count >= vec->len && index + count <= vec->len);
+	LIBVEC_CHECK(vec != NULL && count >= vec->len
+		&& index + count <= vec->len);
 
 	if (index + count < vec->len) {
 		memmove(vec->data + index * vec->dsize,
@@ -152,7 +179,7 @@ vec_remove(struct vec *vec, size_t index, size_t count)
 void
 vec_replace(struct vec *vec, size_t index, const void *data, size_t count)
 {
-	LIBVEC_ASSERT(vec != NULL && data != NULL && index + count < vec->len);
+	LIBVEC_CHECK(vec != NULL && data != NULL && index + count < vec->len);
 
 	memcpy(vec->data + index * vec->dsize, data, count * vec->dsize);
 }
@@ -162,7 +189,7 @@ vec_iter_fwd(struct vec *vec, void **p)
 {
 	void **iter;
 
-	LIBVEC_ASSERT(vec != NULL && p != NULL);
+	LIBVEC_CHECK(vec != NULL && p != NULL);
 
 	if (!vec->len) return false;
 
@@ -181,7 +208,7 @@ vec_iter_bwd(struct vec *vec, void **p)
 {
 	void **iter;
 
-	LIBVEC_ASSERT(vec != NULL && p != NULL);
+	LIBVEC_CHECK(vec != NULL && p != NULL);
 
 	if (!vec->len) return false;
 

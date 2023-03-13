@@ -1,19 +1,25 @@
 #include "vec.h"
 
-#include <stdlib.h>
+#include <err.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
+#define LIBVEC_ERR() errx(1, "test: libvec: %s", strerror(libvec_errno))
 
 int
 main(int argc, const char **argv)
 {
 	struct vec vec;
-	int i, *val;
+	int i, ret;
+	int *val;
 
-	vec_init(&vec, sizeof(int), 10);
+	ret = vec_init(&vec, sizeof(int), 10);
+	if (ret) LIBVEC_ERR();
 
 	for (i = 1; i < argc; i++) {
 		val = vec_alloc_slot(&vec);
+		if (!val) LIBVEC_ERR();
 		*val = atoi(argv[i]);
 	}
 

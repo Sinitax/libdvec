@@ -1,3 +1,5 @@
+libvec_errno
+
 vec_init
 vec_deinit
 
