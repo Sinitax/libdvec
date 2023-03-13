@@ -1,7 +1,5 @@
-LIBVEC_1.2 {
+LIBVEC_1.3 {
 	global:
-		libvec_errno;
-
 		vec_init;
 		vec_deinit;
 

@@ -5,21 +5,21 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define LIBVEC_ERR() errx(1, "test: libvec: %s", strerror(libvec_errno))
+#define LIBVEC_ERR(rc) errx(1, "libvec: %s", strerror(rc))
 
 int
 main(int argc, const char **argv)
 {
 	struct vec vec;
-	int i, ret;
+	int i, rc;
 	int *val;
 
-	ret = vec_init(&vec, sizeof(int), 10);
-	if (ret) LIBVEC_ERR();
+	rc = vec_init(&vec, sizeof(int), 10);
+	if (rc) LIBVEC_ERR(rc);
 
 	for (i = 1; i < argc; i++) {
-		val = vec_alloc_slot(&vec);
-		if (!val) LIBVEC_ERR();
+		rc = vec_alloc_slot(&vec, (void **)&val);
+		if (rc) LIBVEC_ERR(rc);
 		*val = atoi(argv[i]);
 	}
 

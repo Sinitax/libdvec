@@ -13,7 +13,7 @@ struct vec {
 int vec_init(struct vec *vec, size_t dsize, size_t cap);
 void vec_deinit(struct vec *vec);
 
-struct vec *vec_alloc(size_t dsize, size_t cap);
+int vec_alloc(struct vec **vec, size_t dsize, size_t cap);
 void vec_free(struct vec *vec);
 
 void vec_clear(struct vec *vec);
@@ -26,8 +26,6 @@ void vec_replace(struct vec *vec, size_t index, const void *data, size_t count);
 
 bool vec_iter_fwd(struct vec *vec, void **p);
 bool vec_iter_bwd(struct vec *vec, void **p);
-
-extern int libvec_errno;
 
 static inline void *
 vec_at(struct vec *vec, size_t index)
@@ -53,17 +51,23 @@ vec_empty(struct vec *vec)
 	return !vec->len;
 }
 
-static inline void *
-vec_alloc_slots(struct vec *vec, size_t count)
+static inline int
+vec_alloc_slots(struct vec *vec, void **out, size_t count)
 {
-	vec_reserve(vec, vec->len, count);
-	return vec->data + (vec->len - count) * vec->dsize;
+	int ret;
+
+	ret = vec_reserve(vec, vec->len, count);
+	if (ret) return ret;
+
+	*out = vec->data + (vec->len - count) * vec->dsize;
+
+	return 0;
 }
 
-static inline void *
-vec_alloc_slot(struct vec *vec)
+static inline int
+vec_alloc_slot(struct vec *vec, void **out)
 {
-	return vec_alloc_slots(vec, 1);
+	return vec_alloc_slots(vec, out, 1);
 }
 
 static inline void

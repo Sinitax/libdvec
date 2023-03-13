@@ -11,8 +11,6 @@
 #define LIBVEC_CHECK(x)
 #endif
 
-int libvec_errno = 0;
-
 static inline void
 libvec_assert(int cond, const char *file, int line, const char *condstr)
 {
@@ -35,10 +33,7 @@ vec_init(struct vec *vec, size_t dsize, size_t cap)
 	vec->data = NULL;
 	if (vec->cap) {
 		vec->data = calloc(cap, dsize);
-		if (!vec->data) {
-			libvec_errno = errno;
-			return libvec_errno;
-		}
+		if (!vec->data) return errno;
 	}
 
 	return 0;
@@ -52,25 +47,23 @@ vec_deinit(struct vec *vec)
 	free(vec->data);
 }
 
-struct vec *
-vec_alloc(size_t dsize, size_t cap)
+int
+vec_alloc(struct vec **vec, size_t dsize, size_t cap)
 {
-	struct vec *vec;
+	int rc;
 
-	LIBVEC_CHECK(dsize > 0 && cap > 0);
+	LIBVEC_CHECK(vec != NULL && dsize > 0 && cap > 0);
 
-	vec = malloc(sizeof(struct vec));
-	if (!vec) {
-		libvec_errno = errno;
-		return NULL;
-	}
+	*vec = malloc(sizeof(struct vec));
+	if (!*vec) return errno;
 
-	if (!vec_init(vec, dsize, cap)) {
+	rc = vec_init(*vec, dsize, cap);
+	if (rc) {
 		free(vec);
-		return NULL;
+		return rc;
 	}
 
-	return vec;
+	return 0;
 }
 
 void
@@ -81,6 +74,7 @@ vec_free(struct vec *vec)
 	vec_deinit(vec);
 	free(vec);
 }
+
 
 void
 vec_clear(struct vec *vec)
@@ -99,10 +93,7 @@ vec_resize(struct vec *vec, size_t cap)
 
 	vec->cap = cap;
 	alloc = realloc(vec->data, vec->cap * vec->dsize);
-	if (!alloc) {
-		libvec_errno = errno;
-		return libvec_errno;
-	}
+	if (!alloc) return errno;
 	vec->data = alloc;
 
 	return 0;
@@ -122,10 +113,7 @@ vec_shrink(struct vec *vec)
 	}
 
 	alloc = realloc(vec->data, vec->cap * vec->dsize);
-	if (!alloc) {
-		libvec_errno = errno;
-		return libvec_errno;
-	}
+	if (!alloc) return errno;
 	vec->data = alloc;
 
 	return 0;
@@ -143,10 +131,7 @@ vec_reserve(struct vec *vec, size_t index, size_t len)
 		if (vec->len + len > vec->cap)
 			vec->cap = vec->len + len;
 		alloc = realloc(vec->data, vec->cap * vec->dsize);
-		if (!alloc) {
-			libvec_errno = errno;
-			return errno;
-		}
+		if (!alloc) return errno;
 		vec->data = alloc;
 	}
 
@@ -158,7 +143,7 @@ vec_reserve(struct vec *vec, size_t index, size_t len)
 
 	vec->len += len;
 
-	return true;
+	return 0;
 }
 
 void
