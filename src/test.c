@@ -1,32 +1,32 @@
-#include "vec.h"
+#include "dvec.h"
 
 #include <err.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-#define LIBVEC_ERR(rc) errx(1, "libvec: %s", rc < 0 ? strerror(-rc) : "???")
+#define LIBDVEC_ERR(rc) errx(1, "libdvec: %s", rc < 0 ? strerror(-rc) : "???")
 
 int
 main(int argc, const char **argv)
 {
-	struct vec vec;
+	struct dvec dvec;
 	int i, rc;
 	int *val;
 
-	rc = vec_init(&vec, sizeof(int), 10);
-	if (rc) LIBVEC_ERR(rc);
+	rc = dvec_init(&dvec, sizeof(int), 10);
+	if (rc) LIBDVEC_ERR(rc);
 
 	for (i = 1; i < argc; i++) {
-		rc = vec_alloc_slot(&vec, (void **)&val);
-		if (rc) LIBVEC_ERR(rc);
+		rc = dvec_alloc_slot(&dvec, (void **)&val);
+		if (rc) LIBDVEC_ERR(rc);
 		*val = atoi(argv[i]);
 	}
 
-	for (i = 0; i < vec.len; i++)
-		printf("%i\n", *(int *)vec_at(&vec, i));
+	for (i = 0; i < dvec.len; i++)
+		printf("%i\n", *(int *)dvec_at(&dvec, i));
 
-	printf("vec len: %lu\n", vec.len);
+	printf("dvec len: %lu\n", dvec.len);
 
-	vec_deinit(&vec);
+	dvec_deinit(&dvec);
 }
