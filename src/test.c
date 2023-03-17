@@ -1,3 +1,4 @@
+#include "allocator.h"
 #include "dvec.h"
 
 #include <err.h>
@@ -14,7 +15,7 @@ main(int argc, const char **argv)
 	int i, rc;
 	int *val;
 
-	rc = dvec_init(&dvec, sizeof(int), 10);
+	rc = dvec_init(&dvec, sizeof(int), 10, &stdlib_heap_allocator);
 	if (rc) LIBDVEC_ERR(rc);
 
 	for (i = 1; i < argc; i++) {

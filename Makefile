@@ -2,7 +2,8 @@ PREFIX ?= /usr/local
 LIBDIR ?= /lib
 INCLDIR ?= /include
 
-CFLAGS = -I include -Wno-prototype -Wunused-function -Wunused-variable
+CFLAGS = -I include -I lib/liballoc/include
+CFLAGS += -Wno-prototype -Wunused-function -Wunused-variable
 
 ifeq "$(DEBUG)" "1"
 CFLAGS += -g -DLIBDVEC_CHECK_ENABLE=1
@@ -16,6 +17,9 @@ clean:
 build:
 	mkdir build
 
+lib/liballoc/build/liballoc.a:
+	make -C lib/liballoc build/liballoc.a
+
 build/libdvec.a: src/dvec.c include/dvec.h libdvec.api | build
 	$(CC) -o build/tmp.o src/dvec.c $(CFLAGS) -r
 	objcopy --keep-global-symbols=libdvec.api build/tmp.o build/fixed.o
@@ -25,7 +29,7 @@ build/libdvec.so: src/dvec.c include/dvec.h libdvec.lds | build
 	$(CC) -o $@ src/dvec.c -fPIC $(CFLAGS) \
 		-shared -Wl,-version-script libdvec.lds
 
-build/test: src/test.c build/libdvec.a
+build/test: src/test.c build/libdvec.a lib/liballoc/build/liballoc.a
 	$(CC) -o $@ $^ $(CFLAGS)
 
 install:

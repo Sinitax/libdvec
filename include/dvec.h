@@ -1,5 +1,7 @@
 #pragma once
 
+#include "allocator.h"
+
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -8,13 +10,17 @@ struct dvec {
 	size_t len, cap;
 
 	void *data;
+
+	const struct allocator *allocator;
 };
 
-int dvec_init(struct dvec *dvec, size_t dsize, size_t cap);
-void dvec_deinit(struct dvec *dvec);
+int dvec_init(struct dvec *dvec, size_t dsize, size_t cap,
+	const struct allocator *allocator);
+int dvec_deinit(struct dvec *dvec);
 
-int dvec_alloc(struct dvec **dvec, size_t dsize, size_t cap);
-void dvec_free(struct dvec *dvec);
+int dvec_alloc(struct dvec **dvec, size_t dsize, size_t cap,
+	const struct allocator *allocator);
+int dvec_free(struct dvec *dvec);
 
 int dvec_copy(struct dvec *dst, struct dvec *src);
 void dvec_swap(struct dvec *dst, struct dvec *src);

@@ -1,6 +1,5 @@
 #include "dvec.h"
 
-#include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -24,57 +23,69 @@ libdvec_assert(int cond, const char *file, int line, const char *condstr)
 #endif
 
 int
-dvec_init(struct dvec *dvec, size_t dsize, size_t cap)
+dvec_init(struct dvec *dvec, size_t dsize, size_t cap,
+	const struct allocator *allocator)
 {
-	LIBDVEC_CHECK(dvec != NULL && dsize > 0 && cap >= 0);
+	int rc;
 
+	LIBDVEC_CHECK(dvec != NULL && dsize > 0
+		&& cap >= 0 && allocator != NULL);
+
+	dvec->allocator = allocator;
 	dvec->dsize = dsize;
 	dvec->cap = cap;
-
 	dvec->len = 0;
 	dvec->data = NULL;
 	if (dvec->cap) {
-		dvec->data = calloc(cap, dsize);
-		if (!dvec->data) return -errno;
+		rc = allocator->alloc(&dvec->data, cap * dsize);
+		if (rc) return -rc;
 	}
 
 	return 0;
 }
 
-void
+int
 dvec_deinit(struct dvec *dvec)
 {
 	LIBDVEC_CHECK(dvec != NULL);
 
-	free(dvec->data);
+	return dvec->allocator->free(dvec->data);
 }
 
 int
-dvec_alloc(struct dvec **dvec, size_t dsize, size_t cap)
+dvec_alloc(struct dvec **dvec, size_t dsize, size_t cap,
+	const struct allocator *allocator)
 {
 	int rc;
 
 	LIBDVEC_CHECK(dvec != NULL && dsize > 0 && cap > 0);
 
-	*dvec = malloc(sizeof(struct dvec));
-	if (!*dvec) return -errno;
+	rc = allocator->alloc((void **)dvec, sizeof(struct dvec));
+	if (!*dvec) return -rc;
 
-	rc = dvec_init(*dvec, dsize, cap);
-	if (rc) {
-		free(dvec);
-		return rc;
-	}
+	rc = dvec_init(*dvec, dsize, cap, allocator);
+	if (rc) return rc;
 
 	return 0;
 }
 
-void
+int
 dvec_free(struct dvec *dvec)
 {
+	const struct allocator *allocator;
+	int rc;
+
 	LIBDVEC_CHECK(dvec != NULL);
 
-	dvec_deinit(dvec);
-	free(dvec);
+	allocator = dvec->allocator;
+
+	rc = dvec_deinit(dvec);
+	if (rc) return rc;
+
+	rc = allocator->free(dvec);
+	if (rc) return -rc;
+
+	return 0;
 }
 
 int
@@ -82,10 +93,10 @@ dvec_copy(struct dvec *dst, struct dvec *src)
 {
 	int rc;
 
+	dst->dsize = src->dsize;
 	rc = dvec_reserve(dst, src->len);
 	if (rc) return rc;
 
-	dst->dsize = src->dsize;
 	dst->len = src->len;
 	memcpy(dst->data, src->data, src->len * src->dsize);
 
@@ -113,15 +124,15 @@ dvec_clear(struct dvec *dvec)
 int
 dvec_reserve(struct dvec *dvec, size_t len)
 {
-	void *alloc;
+	int rc;
 
 	if (len <= dvec->cap) return 0;
 
 	dvec->cap *= 2;
 	if (len > dvec->cap) dvec->cap = len;
-	alloc = realloc(dvec->data, dvec->cap * dvec->dsize);
-	if (!alloc) return -errno;
-	dvec->data = alloc;
+
+	rc = dvec->allocator->realloc(&dvec->data, dvec->cap * dvec->dsize);
+	if (rc) return rc;
 
 	return 0;
 }
@@ -129,7 +140,7 @@ dvec_reserve(struct dvec *dvec, size_t len)
 int
 dvec_shrink(struct dvec *dvec)
 {
-	void *alloc;
+	int rc;
 
 	LIBDVEC_CHECK(dvec != NULL);
 
@@ -140,9 +151,9 @@ dvec_shrink(struct dvec *dvec)
 	}
 
 	dvec->cap = dvec->len;
-	alloc = realloc(dvec->data, dvec->cap * dvec->dsize);
-	if (!alloc) return -errno;
-	dvec->data = alloc;
+
+	rc = dvec->allocator->realloc(&dvec->data, dvec->cap * dvec->dsize);
+	if (rc) return -rc;
 
 	return 0;
 }
