@@ -77,6 +77,30 @@ dvec_free(struct dvec *dvec)
 	free(dvec);
 }
 
+int
+dvec_copy(struct dvec *dst, struct dvec *src)
+{
+	int rc;
+
+	rc = dvec_reserve(dst, src->len);
+	if (rc) return rc;
+
+	dst->dsize = src->dsize;
+	dst->len = src->len;
+	memcpy(dst->data, src->data, src->len * src->dsize);
+
+	return 0;
+}
+
+void
+dvec_swap(struct dvec *dst, struct dvec *src)
+{
+	struct dvec tmp;
+
+	memcpy(&tmp, dst, sizeof(struct dvec));
+	memcpy(dst, src, sizeof(struct dvec));
+	memcpy(src, &tmp, sizeof(struct dvec));
+}
 
 void
 dvec_clear(struct dvec *dvec)
@@ -87,13 +111,14 @@ dvec_clear(struct dvec *dvec)
 }
 
 int
-dvec_resize(struct dvec *dvec, size_t cap)
+dvec_reserve(struct dvec *dvec, size_t len)
 {
 	void *alloc;
 
-	LIBDVEC_CHECK(dvec != NULL && cap != 0 && dvec->len <= cap);
+	if (len <= dvec->cap) return 0;
 
-	dvec->cap = cap;
+	dvec->cap *= 2;
+	if (len > dvec->cap) dvec->cap = len;
 	alloc = realloc(dvec->data, dvec->cap * dvec->dsize);
 	if (!alloc) return -errno;
 	dvec->data = alloc;
@@ -109,11 +134,12 @@ dvec_shrink(struct dvec *dvec)
 	LIBDVEC_CHECK(dvec != NULL);
 
 	if (!dvec->len) {
-		dvec->cap = 1;
-	} else {
-		dvec->cap = dvec->len;
+		dvec->cap = 0;
+		free(dvec->data);
+		return 0;
 	}
 
+	dvec->cap = dvec->len;
 	alloc = realloc(dvec->data, dvec->cap * dvec->dsize);
 	if (!alloc) return -errno;
 	dvec->data = alloc;
@@ -122,20 +148,11 @@ dvec_shrink(struct dvec *dvec)
 }
 
 int
-dvec_reserve(struct dvec *dvec, size_t index, size_t len)
+dvec_add(struct dvec *dvec, size_t index, size_t len)
 {
-	void *alloc;
-
 	LIBDVEC_CHECK(dvec != NULL && index <= dvec->len);
 
-	if (dvec->len + len > dvec->cap) {
-		dvec->cap *= 2;
-		if (dvec->len + len > dvec->cap)
-			dvec->cap = dvec->len + len;
-		alloc = realloc(dvec->data, dvec->cap * dvec->dsize);
-		if (!alloc) return -errno;
-		dvec->data = alloc;
-	}
+	dvec_reserve(dvec, dvec->len + len);
 
 	if (index < dvec->len) {
 		memmove(dvec->data + (index + len) * dvec->dsize,

@@ -16,11 +16,14 @@ void dvec_deinit(struct dvec *dvec);
 int dvec_alloc(struct dvec **dvec, size_t dsize, size_t cap);
 void dvec_free(struct dvec *dvec);
 
+int dvec_copy(struct dvec *dst, struct dvec *src);
+void dvec_swap(struct dvec *dst, struct dvec *src);
+
 void dvec_clear(struct dvec *dvec);
-int dvec_resize(struct dvec *dvec, size_t cap);
+int dvec_reserve(struct dvec *dvec, size_t cap);
 int dvec_shrink(struct dvec *dvec);
 
-int dvec_reserve(struct dvec *dvec, size_t index, size_t count);
+int dvec_add(struct dvec *dvec, size_t index, size_t count);
 void dvec_remove(struct dvec *dvec, size_t index, size_t count);
 void dvec_replace(struct dvec *dvec, size_t index, const void *data, size_t count);
 
@@ -51,33 +54,29 @@ dvec_empty(struct dvec *dvec)
 	return !dvec->len;
 }
 
-static inline int
-dvec_alloc_slots(struct dvec *dvec, void **out, size_t count)
+static inline void *
+dvec_add_slots(struct dvec *dvec, int *rc, size_t count)
 {
-	int ret;
+	*rc = dvec_add(dvec, dvec->len, count);
+	if (*rc) return NULL;
 
-	ret = dvec_reserve(dvec, dvec->len, count);
-	if (ret) return ret;
-
-	*out = dvec->data + (dvec->len - count) * dvec->dsize;
-
-	return 0;
+	return dvec->data + (dvec->len - count) * dvec->dsize;
 }
 
-static inline int
-dvec_alloc_slot(struct dvec *dvec, void **out)
+static inline void *
+dvec_add_slot(struct dvec *dvec, int *rc)
 {
-	return dvec_alloc_slots(dvec, out, 1);
+	return dvec_add_slots(dvec, rc, 1);
 }
 
 static inline void
-dvec_free_slots(struct dvec *dvec, void *slot, size_t count)
+dvec_rm_slots(struct dvec *dvec, void *slot, size_t count)
 {
 	dvec_remove(dvec, (slot - dvec->data) / dvec->dsize, count);
 }
 
 static inline void
-dvec_free_slot(struct dvec *dvec, void *slot)
+dvec_rm_slot(struct dvec *dvec, void *slot)
 {
-	dvec_free_slots(dvec, slot, 1);
+	dvec_rm_slots(dvec, slot, 1);
 }

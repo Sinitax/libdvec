@@ -18,7 +18,7 @@ main(int argc, const char **argv)
 	if (rc) LIBDVEC_ERR(rc);
 
 	for (i = 1; i < argc; i++) {
-		rc = dvec_alloc_slot(&dvec, (void **)&val);
+		val = dvec_add_slot(&dvec, &rc);
 		if (rc) LIBDVEC_ERR(rc);
 		*val = atoi(argv[i]);
 	}

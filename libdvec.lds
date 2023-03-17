@@ -1,4 +1,4 @@
-LIBDVEC_1.0 {
+LIBDVEC_1.1 {
 	global:
 		dvec_init;
 		dvec_deinit;
@@ -6,11 +6,14 @@ LIBDVEC_1.0 {
 		dvec_alloc;
 		dvec_free;
 
+		dvec_copy;
+		dvec_swap;
+
 		dvec_clear;
-		dvec_resize;
+		dvec_reserve;
 		dvec_shrink;
 
-		dvec_reserve;
+		dvec_add;
 		dvec_remove;
 		dvec_replace;
 
