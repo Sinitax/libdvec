@@ -4,13 +4,6 @@
 #include <stdlib.h>
 
 #ifdef LIBDVEC_CHECK_ENABLE
-#include <stdio.h>
-#define LIBDVEC_CHECK(x) libdvec_assert((x), __FILE__, __LINE__, #x)
-#else
-#define LIBDVEC_CHECK(x)
-#endif
-
-#ifdef LIBDVEC_CHECK_ENABLE
 static inline void
 libdvec_assert(int cond, const char *file, int line, const char *condstr)
 {
@@ -28,8 +21,7 @@ dvec_init(struct dvec *dvec, size_t dsize, size_t cap,
 {
 	int rc;
 
-	LIBDVEC_CHECK(dvec != NULL && dsize > 0
-		&& cap >= 0 && allocator != NULL);
+	LIBDVEC_ABORT_ON_ARGS(!dvec || !dsize || !allocator);
 
 	dvec->allocator = allocator;
 	dvec->dsize = dsize;
@@ -38,6 +30,7 @@ dvec_init(struct dvec *dvec, size_t dsize, size_t cap,
 	dvec->data = NULL;
 	if (dvec->cap) {
 		rc = allocator->alloc(&dvec->data, cap * dsize);
+		LIBDVEC_ABORT_ON_ALLOC(rc);
 		if (rc) return -rc;
 	}
 
@@ -47,9 +40,13 @@ dvec_init(struct dvec *dvec, size_t dsize, size_t cap,
 int
 dvec_deinit(struct dvec *dvec)
 {
-	LIBDVEC_CHECK(dvec != NULL);
+	int rc;
 
-	return dvec->allocator->free(dvec->data);
+	LIBDVEC_ABORT_ON_ARGS(!dvec);
+
+	rc = dvec->allocator->free(dvec->data);
+	LIBDVEC_ABORT_ON_ALLOC(rc);
+	return -rc;
 }
 
 int
@@ -58,9 +55,10 @@ dvec_alloc(struct dvec **dvec, size_t dsize, size_t cap,
 {
 	int rc;
 
-	LIBDVEC_CHECK(dvec != NULL && dsize > 0 && cap > 0);
+	LIBDVEC_ABORT_ON_ARGS(!allocator);
 
 	rc = allocator->alloc((void **)dvec, sizeof(struct dvec));
+	LIBDVEC_ABORT_ON_ALLOC(rc);
 	if (!*dvec) return -rc;
 
 	rc = dvec_init(*dvec, dsize, cap, allocator);
@@ -75,7 +73,7 @@ dvec_free(struct dvec *dvec)
 	const struct allocator *allocator;
 	int rc;
 
-	LIBDVEC_CHECK(dvec != NULL);
+	LIBDVEC_ABORT_ON_ARGS(!dvec);
 
 	allocator = dvec->allocator;
 
@@ -83,6 +81,7 @@ dvec_free(struct dvec *dvec)
 	if (rc) return rc;
 
 	rc = allocator->free(dvec);
+	LIBDVEC_ABORT_ON_ALLOC(rc);
 	if (rc) return -rc;
 
 	return 0;
@@ -92,6 +91,8 @@ int
 dvec_copy(struct dvec *dst, struct dvec *src)
 {
 	int rc;
+
+	LIBDVEC_ABORT_ON_ARGS(!dst || !src);
 
 	dst->dsize = src->dsize;
 	rc = dvec_reserve(dst, src->len);
@@ -108,6 +109,8 @@ dvec_swap(struct dvec *dst, struct dvec *src)
 {
 	struct dvec tmp;
 
+	LIBDVEC_ABORT_ON_ARGS(!dst || !src);
+
 	memcpy(&tmp, dst, sizeof(struct dvec));
 	memcpy(dst, src, sizeof(struct dvec));
 	memcpy(src, &tmp, sizeof(struct dvec));
@@ -116,7 +119,7 @@ dvec_swap(struct dvec *dst, struct dvec *src)
 void
 dvec_clear(struct dvec *dvec)
 {
-	LIBDVEC_CHECK(dvec != NULL);
+	LIBDVEC_ABORT_ON_ARGS(!dvec);
 
 	dvec->len = 0;
 }
@@ -126,12 +129,15 @@ dvec_reserve(struct dvec *dvec, size_t len)
 {
 	int rc;
 
+	LIBDVEC_ABORT_ON_ARGS(!dvec);
+
 	if (len <= dvec->cap) return 0;
 
 	dvec->cap *= 2;
 	if (len > dvec->cap) dvec->cap = len;
 
 	rc = dvec->allocator->realloc(&dvec->data, dvec->cap * dvec->dsize);
+	LIBDVEC_ABORT_ON_ALLOC(rc);
 	if (rc) return rc;
 
 	return 0;
@@ -142,17 +148,20 @@ dvec_shrink(struct dvec *dvec)
 {
 	int rc;
 
-	LIBDVEC_CHECK(dvec != NULL);
+	LIBDVEC_ABORT_ON_ARGS(!dvec);
 
 	if (!dvec->len) {
 		dvec->cap = 0;
-		free(dvec->data);
+		rc = dvec->allocator->free(dvec->data);
+		LIBDVEC_ABORT_ON_ALLOC(rc);
+		if (rc) return -rc;
 		return 0;
 	}
 
 	dvec->cap = dvec->len;
 
 	rc = dvec->allocator->realloc(&dvec->data, dvec->cap * dvec->dsize);
+	LIBDVEC_ABORT_ON_ALLOC(rc);
 	if (rc) return -rc;
 
 	return 0;
@@ -161,7 +170,7 @@ dvec_shrink(struct dvec *dvec)
 int
 dvec_add(struct dvec *dvec, size_t index, size_t len)
 {
-	LIBDVEC_CHECK(dvec != NULL && index <= dvec->len);
+	LIBDVEC_ABORT_ON_ARGS(!dvec || index > dvec->len);
 
 	dvec_reserve(dvec, dvec->len + len);
 
@@ -179,8 +188,7 @@ dvec_add(struct dvec *dvec, size_t index, size_t len)
 void
 dvec_remove(struct dvec *dvec, size_t index, size_t count)
 {
-	LIBDVEC_CHECK(dvec != NULL && count >= dvec->len
-		&& index + count <= dvec->len);
+	LIBDVEC_ABORT_ON_ARGS(!dvec || index + count > dvec->len);
 
 	if (index + count < dvec->len) {
 		memmove(dvec->data + index * dvec->dsize,
@@ -194,7 +202,7 @@ dvec_remove(struct dvec *dvec, size_t index, size_t count)
 void
 dvec_replace(struct dvec *dvec, size_t index, const void *data, size_t count)
 {
-	LIBDVEC_CHECK(dvec != NULL && data != NULL && index + count < dvec->len);
+	LIBDVEC_ABORT_ON_ARGS(!dvec || !data || index + count > dvec->len);
 
 	memcpy(dvec->data + index * dvec->dsize, data, count * dvec->dsize);
 }
@@ -204,7 +212,7 @@ dvec_iter_fwd(struct dvec *dvec, void **p)
 {
 	void **iter;
 
-	LIBDVEC_CHECK(dvec != NULL && p != NULL);
+	LIBDVEC_ABORT_ON_ARGS(!dvec || !p);
 
 	if (!dvec->len) return false;
 
@@ -223,7 +231,7 @@ dvec_iter_bwd(struct dvec *dvec, void **p)
 {
 	void **iter;
 
-	LIBDVEC_CHECK(dvec != NULL && p != NULL);
+	LIBDVEC_ABORT_ON_ARGS(!dvec || !p);
 
 	if (!dvec->len) return false;
 

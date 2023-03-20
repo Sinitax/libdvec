@@ -6,7 +6,15 @@ CFLAGS = -I include -I lib/liballoc/include
 CFLAGS += -Wno-prototype -Wunused-function -Wunused-variable
 
 ifeq "$(DEBUG)" "1"
-CFLAGS += -g -DLIBDVEC_CHECK_ENABLE=1
+CFLAGS += -g
+endif
+
+ifeq "$(ASSERT_ARGS)" "1"
+CFLAGS += -DLIBDVEC_ASSERT_ARGS=1
+endif
+
+ifeq "$(ASSERT_ALLOC)" "1"
+CFLAGS += -DLIBDVEC_ASSERT_ALLOC=1
 endif
 
 all: build/libdvec.so build/libdvec.a build/test
