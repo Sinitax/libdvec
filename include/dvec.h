@@ -3,7 +3,10 @@
 #include "allocator.h"
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
+
+#define DVEC_ITER(dvec, p) *p = dvec->data; dvec_iter_fwd(dvec, (void **)p);
 
 struct dvec {
 	size_t dsize;
@@ -60,6 +63,12 @@ dvec_empty(struct dvec *dvec)
 	return !dvec->len;
 }
 
+static inline size_t
+dvec_len(struct dvec *dvec)
+{
+	return dvec->len;
+}
+
 static inline void *
 dvec_add_slots(struct dvec *dvec, int *rc, size_t count)
 {
@@ -78,7 +87,7 @@ dvec_add_slot(struct dvec *dvec, int *rc)
 static inline void
 dvec_rm_slots(struct dvec *dvec, void *slot, size_t count)
 {
-	dvec_remove(dvec, (slot - dvec->data) / dvec->dsize, count);
+	dvec_remove(dvec, ((size_t) (slot - dvec->data)) / dvec->dsize, count);
 }
 
 static inline void
