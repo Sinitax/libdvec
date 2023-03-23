@@ -138,7 +138,7 @@ dvec_reserve(struct dvec *dvec, size_t len)
 
 	rc = dvec->allocator->realloc(&dvec->data, dvec->cap * dvec->dsize);
 	LIBDVEC_ABORT_ON_ALLOC(rc);
-	if (rc) return rc;
+	if (rc) return -rc;
 
 	return 0;
 }
@@ -170,9 +170,12 @@ dvec_shrink(struct dvec *dvec)
 int
 dvec_add(struct dvec *dvec, size_t index, size_t len)
 {
+	int rc;
+
 	LIBDVEC_ABORT_ON_ARGS(!dvec || index > dvec->len);
 
-	dvec_reserve(dvec, dvec->len + len);
+	rc = dvec_reserve(dvec, dvec->len + len);
+	if (rc) return rc;
 
 	if (index < dvec->len) {
 		memmove(dvec->data + (index + len) * dvec->dsize,
@@ -208,7 +211,7 @@ dvec_replace(struct dvec *dvec, size_t index, const void *data, size_t count)
 }
 
 bool
-dvec_iter_fwd(struct dvec *dvec, void **p)
+dvec_iter_fwd(const struct dvec *dvec, void **p)
 {
 	void **iter;
 
@@ -227,7 +230,7 @@ dvec_iter_fwd(struct dvec *dvec, void **p)
 }
 
 bool
-dvec_iter_bwd(struct dvec *dvec, void **p)
+dvec_iter_bwd(const struct dvec *dvec, void **p)
 {
 	void **iter;
 
