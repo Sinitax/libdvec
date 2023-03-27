@@ -1,4 +1,4 @@
-LIBDVEC_1.1 {
+LIBDVEC_1.1.1 {
 	global:
 		dvec_init;
 		dvec_deinit;

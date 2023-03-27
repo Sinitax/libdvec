@@ -46,6 +46,7 @@ dvec_deinit(struct dvec *dvec)
 
 	rc = dvec->allocator->free(dvec->data);
 	LIBDVEC_ABORT_ON_ALLOC(rc);
+
 	return -rc;
 }
 
@@ -59,7 +60,7 @@ dvec_alloc(struct dvec **dvec, size_t dsize, size_t cap,
 
 	rc = allocator->alloc((void **)dvec, sizeof(struct dvec));
 	LIBDVEC_ABORT_ON_ALLOC(rc);
-	if (!*dvec) return -rc;
+	if (rc) return -rc;
 
 	rc = dvec_init(*dvec, dsize, cap, allocator);
 	if (rc) return rc;
@@ -155,14 +156,12 @@ dvec_shrink(struct dvec *dvec)
 		rc = dvec->allocator->free(dvec->data);
 		LIBDVEC_ABORT_ON_ALLOC(rc);
 		if (rc) return -rc;
-		return 0;
+	} else {
+		dvec->cap = dvec->len;
+		rc = dvec->allocator->realloc(&dvec->data, dvec->cap * dvec->dsize);
+		LIBDVEC_ABORT_ON_ALLOC(rc);
+		if (rc) return -rc;
 	}
-
-	dvec->cap = dvec->len;
-
-	rc = dvec->allocator->realloc(&dvec->data, dvec->cap * dvec->dsize);
-	LIBDVEC_ABORT_ON_ALLOC(rc);
-	if (rc) return -rc;
 
 	return 0;
 }
@@ -210,42 +209,42 @@ dvec_replace(struct dvec *dvec, size_t index, const void *data, size_t count)
 	memcpy(dvec->data + index * dvec->dsize, data, count * dvec->dsize);
 }
 
-bool
-dvec_iter_fwd(const struct dvec *dvec, void **p)
+void *
+dvec_iter_fwd(const struct dvec *dvec, void *p)
 {
-	void **iter;
+	LIBDVEC_ABORT_ON_ARGS(!dvec);
+	LIBDVEC_ABORT_ON_ARGS(p && (p < dvec->data));
+	LIBDVEC_ABORT_ON_ARGS(p && (p >= dvec->data + dvec->len * dvec->dsize));
+	LIBDVEC_ABORT_ON_ARGS(p && ((size_t) (p - dvec->data) % dvec->dsize));
 
-	LIBDVEC_ABORT_ON_ARGS(!dvec || !p);
-
-	if (!dvec->len) return false;
-
-	iter = p;
-	if (*iter == NULL) {
-		*iter = dvec->data;
+	if (p == NULL) {
+		if (dvec->len > 0)
+			return dvec->data;
+		else
+			return NULL;
+	} else if (p < dvec->data + dvec->dsize * (dvec->len - 1)) {
+		return p + dvec->dsize;
 	} else {
-		*iter += dvec->dsize;
+		return NULL;
 	}
-
-	return *iter < dvec->data + dvec->dsize * dvec->len;
 }
 
-bool
-dvec_iter_bwd(const struct dvec *dvec, void **p)
+void *
+dvec_iter_bwd(const struct dvec *dvec, void *p)
 {
-	void **iter;
+	LIBDVEC_ABORT_ON_ARGS(!dvec);
+	LIBDVEC_ABORT_ON_ARGS(p && (p < dvec->data));
+	LIBDVEC_ABORT_ON_ARGS(p && (p >= dvec->data + dvec->len * dvec->dsize));
+	LIBDVEC_ABORT_ON_ARGS(p && ((size_t) (p - dvec->data) % dvec->dsize));
 
-	LIBDVEC_ABORT_ON_ARGS(!dvec || !p);
-
-	if (!dvec->len) return false;
-
-	iter = p;
-	if (*iter == NULL) {
-		*iter = dvec->data + (dvec->len - 1) * dvec->dsize;
-	} else if (*iter > dvec->data) {
-		*iter -= dvec->dsize;
+	if (p == NULL) {
+		if (dvec->len > 0)
+			return dvec->data + (dvec->len - 1) * dvec->dsize;
+		else
+			return NULL;
+	} else if (p > dvec->data) {
+		return p - dvec->dsize;
 	} else {
-		return false;
+		return NULL;
 	}
-
-	return true;
 }

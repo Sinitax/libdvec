@@ -5,7 +5,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define DVEC_ITER(dvec, p) *p = NULL; dvec_iter_fwd(dvec, (void **)(p));
+#define DVEC_ITER(dvec, p)     (p) = NULL; ((p) = dvec_iter_fwd((dvec), (p)));
+#define DVEC_ITER_BWD(dvec, p) (p) = NULL; ((p) = dvec_iter_bwd((dvec), (p)));
+
+#define DVEC_STRERR_INIT \
+	[DVEC_OK] = "Success"
 
 #ifdef LIBDVEC_ASSERT_ARGS
 #include "stdlib.h"
@@ -20,6 +24,10 @@
 #else
 #define LIBDVEC_ABORT_ON_ALLOC(cond)
 #endif
+
+enum {
+	DVEC_OK = 0,
+};
 
 struct dvec {
 	size_t dsize;
@@ -50,19 +58,27 @@ void dvec_remove(struct dvec *dvec, size_t index, size_t count);
 void dvec_replace(struct dvec *dvec, size_t index,
 	const void *data, size_t count);
 
-bool dvec_iter_fwd(const struct dvec *dvec, void **p);
-bool dvec_iter_bwd(const struct dvec *dvec, void **p);
+void *dvec_iter_fwd(const struct dvec *dvec, void *p);
+void *dvec_iter_bwd(const struct dvec *dvec, void *p);
 
 static inline void *
-dvec_at(struct dvec *dvec, size_t index)
+dvec_at(const struct dvec *dvec, size_t index)
 {
-	LIBDVEC_ABORT_ON_ARGS(!dvec);
+	LIBDVEC_ABORT_ON_ARGS(!dvec || index >= dvec->len);
 
 	return dvec->data + index * dvec->dsize;
 }
 
 static inline void *
-dvec_front(struct dvec *dvec)
+dvec_at_back(const struct dvec *dvec, size_t index)
+{
+	LIBDVEC_ABORT_ON_ARGS(!dvec || !index || index >= dvec->len);
+
+	return dvec->data + (dvec->len  - 1 - index) * dvec->dsize;
+}
+
+static inline void *
+dvec_front(const struct dvec *dvec)
 {
 	LIBDVEC_ABORT_ON_ARGS(!dvec);
 
@@ -70,7 +86,7 @@ dvec_front(struct dvec *dvec)
 }
 
 static inline void *
-dvec_back(struct dvec *dvec)
+dvec_back(const struct dvec *dvec)
 {
 	LIBDVEC_ABORT_ON_ARGS(!dvec);
 
@@ -78,7 +94,7 @@ dvec_back(struct dvec *dvec)
 }
 
 static inline bool
-dvec_empty(struct dvec *dvec)
+dvec_empty(const struct dvec *dvec)
 {
 	LIBDVEC_ABORT_ON_ARGS(!dvec);
 
@@ -86,47 +102,15 @@ dvec_empty(struct dvec *dvec)
 }
 
 static inline size_t
-dvec_len(struct dvec *dvec)
+dvec_len(const struct dvec *dvec)
 {
 	LIBDVEC_ABORT_ON_ARGS(!dvec);
 
 	return dvec->len;
 }
 
-static inline void *
-dvec_add_slots(struct dvec *dvec, int *_rc, size_t count)
+static inline int
+dvec_add_back(struct dvec *dvec, size_t count)
 {
-	int rc;
-
-	LIBDVEC_ABORT_ON_ARGS(!dvec || !count);
-
-	rc = dvec_add(dvec, dvec->len, count);
-	if (_rc) *_rc = rc;
-	if (rc) return NULL;
-
-	return dvec->data + (dvec->len - count) * dvec->dsize;
-}
-
-static inline void *
-dvec_add_slot(struct dvec *dvec, int *rc)
-{
-	LIBDVEC_ABORT_ON_ARGS(!dvec);
-
-	return dvec_add_slots(dvec, rc, 1);
-}
-
-static inline void
-dvec_rm_slots(struct dvec *dvec, void *slot, size_t count)
-{
-	LIBDVEC_ABORT_ON_ARGS(!dvec || slot < dvec->data || !count);
-
-	dvec_remove(dvec, ((size_t) (slot - dvec->data)) / dvec->dsize, count);
-}
-
-static inline void
-dvec_rm_slot(struct dvec *dvec, void *slot)
-{
-	LIBDVEC_ABORT_ON_ARGS(!dvec || !slot);
-
-	dvec_rm_slots(dvec, slot, 1);
+	return dvec_add(dvec, dvec->len, count);
 }
