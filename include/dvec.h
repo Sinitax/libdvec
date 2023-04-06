@@ -58,8 +58,8 @@ void dvec_remove(struct dvec *dvec, size_t index, size_t count);
 void dvec_replace(struct dvec *dvec, size_t index,
 	const void *data, size_t count);
 
-void *dvec_iter_fwd(const struct dvec *dvec, void *p);
-void *dvec_iter_bwd(const struct dvec *dvec, void *p);
+void *dvec_iter_fwd(const struct dvec *dvec, const void *p);
+void *dvec_iter_bwd(const struct dvec *dvec, const void *p);
 
 static inline void *
 dvec_at(const struct dvec *dvec, size_t index)

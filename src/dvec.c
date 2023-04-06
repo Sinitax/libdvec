@@ -210,7 +210,7 @@ dvec_replace(struct dvec *dvec, size_t index, const void *data, size_t count)
 }
 
 void *
-dvec_iter_fwd(const struct dvec *dvec, void *p)
+dvec_iter_fwd(const struct dvec *dvec, const void *p)
 {
 	LIBDVEC_ABORT_ON_ARGS(!dvec);
 	LIBDVEC_ABORT_ON_ARGS(p && (p < dvec->data));
@@ -223,14 +223,14 @@ dvec_iter_fwd(const struct dvec *dvec, void *p)
 		else
 			return NULL;
 	} else if (p < dvec->data + dvec->dsize * (dvec->len - 1)) {
-		return p + dvec->dsize;
+		return (void *) p + dvec->dsize;
 	} else {
 		return NULL;
 	}
 }
 
 void *
-dvec_iter_bwd(const struct dvec *dvec, void *p)
+dvec_iter_bwd(const struct dvec *dvec, const void *p)
 {
 	LIBDVEC_ABORT_ON_ARGS(!dvec);
 	LIBDVEC_ABORT_ON_ARGS(p && (p < dvec->data));
@@ -243,7 +243,7 @@ dvec_iter_bwd(const struct dvec *dvec, void *p)
 		else
 			return NULL;
 	} else if (p > dvec->data) {
-		return p - dvec->dsize;
+		return (void *) p - dvec->dsize;
 	} else {
 		return NULL;
 	}
