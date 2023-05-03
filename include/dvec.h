@@ -54,7 +54,7 @@ int dvec_reserve(struct dvec *dvec, size_t cap);
 int dvec_shrink(struct dvec *dvec);
 
 int dvec_add(struct dvec *dvec, size_t index, size_t count);
-void dvec_remove(struct dvec *dvec, size_t index, size_t count);
+void dvec_rm(struct dvec *dvec, size_t index, size_t count);
 void dvec_replace(struct dvec *dvec, size_t index,
 	const void *data, size_t count);
 
@@ -113,4 +113,10 @@ static inline int
 dvec_add_back(struct dvec *dvec, size_t count)
 {
 	return dvec_add(dvec, dvec->len, count);
+}
+
+static inline void
+dvec_rm_back(struct dvec *dvec, size_t count)
+{
+	dvec_rm(dvec, dvec->len - count, count);
 }

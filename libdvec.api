@@ -12,7 +12,7 @@ dvec_reserve
 dvec_shrink
 
 dvec_add
-dvec_remove
+dvec_rm
 dvec_replace
 
 dvec_iter_fwd

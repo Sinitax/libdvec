@@ -188,7 +188,7 @@ dvec_add(struct dvec *dvec, size_t index, size_t len)
 }
 
 void
-dvec_remove(struct dvec *dvec, size_t index, size_t count)
+dvec_rm(struct dvec *dvec, size_t index, size_t count)
 {
 	LIBDVEC_ABORT_ON_ARGS(!dvec || index + count > dvec->len);
 
