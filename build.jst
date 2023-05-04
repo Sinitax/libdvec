@@ -1,0 +1,36 @@
+liballoc = lib/liballoc//build/liballoc.a
+
+cflags = -Wunused-function -Wunused-variable -Wconversion -Wformat
+		-I include -I lib/liballoc/include
+
+rule liba
+	gcc -o $out.tmp.o $in $cflags -r
+	objcopy --keep-global-symbols=libdvec.api $out.tmp.o $out.fixed.o
+	ar rcs $out $out.fixed.o
+	rm $out.tmp.o $out.fixed.o
+
+rule libso
+	gcc -o $out $in $cflags -shared -Wl,-version-script libdvec.lds
+
+rule cc
+	gcc -o $out $in $cflags
+
+rule mkdir
+	mkdir $out
+
+target build
+	mkdir
+
+target build/libdvec.a
+	# TODO add include dep
+	liba src/dvec.c $liballoc
+
+target build/libdvec.so
+	# TODO add include dep
+	libso src/dvec.c
+
+target build/test
+	cc src/test.c build/libdvec.a $liballoc
+
+target all
+	file build build/libdvec.a build/libdvec.so build/test
